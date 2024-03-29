@@ -11,7 +11,8 @@ import {
   Avatar,
   Stack,
 } from "@mui/material";
-import { Add as AddIcon, CloudUpload } from "@mui/icons-material";
+import { Add as AddIcon } from "@mui/icons-material";
+import { FileInputButton, FileCard } from "@files-ui/react";
 
 const AddPostContainer = styled("div")(({ theme }) => ({
   width: "450px",
@@ -39,6 +40,7 @@ class Add extends Component {
     super(props);
     this.state = {
       open: false,
+      value: "",
     };
   }
 
@@ -49,6 +51,16 @@ class Add extends Component {
   handleClose = () => {
     this.setState({ open: false });
   };
+
+  updateFiles = (incomingFiles) => {
+    console.log("This is from incoming Files", incomingFiles[0].file);
+    this.setState({ value: incomingFiles[0] });
+  };
+
+  removeFile = () => {
+    this.setState({ value: undefined });
+  };
+
   render() {
     return (
       <>
@@ -77,58 +89,61 @@ class Add extends Component {
           aria-describedby="modal-modal-description"
         >
           <AddPostContainer>
-            {this.props.user.username ? (
-              <Box>
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const content = this.content.value;
-                    this.props.createPost(content);
-                  }}
-                >
-                  <Stack direction={"column"} gap={3}>
-                    <Stack direction={"row"} gap={2} onClick={this.handleClick}>
-                      <Box>
-                        <Avatar
-                          sx={{ width: 30, height: 30 }}
-                          src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureHash}`}
-                        />
-                      </Box>
-                      <Box>
-                        <Typography>{this.props.user.username}</Typography>
-                      </Box>
-                    </Stack>
-                    <input
-                      id="content"
-                      type="text"
-                      ref={(input) => {
-                        this.content = input;
-                      }}
-                      className="form-control"
-                      placeholder="What's on your mind?"
-                      required
-                    />
-                    <Button
-                      component="label"
-                      variant="contained"
-                      startIcon={<CloudUpload />}
-                    >
-                      Upload file
-                      <VisuallyHiddenInput
-                        type="file"
-                        accept=".jpg, .jpeg, .png, .bmp, .gif"
-                        onChange={this.props.captureFile}
+            <Box>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const postDescritpion = this.postDescritpion.value;
+                  const postType = "jpg";
+                  this.props.createPost(postDescritpion, postType);
+                }}
+              >
+                <Stack direction={"column"} gap={3}>
+                  <Stack direction={"row"} gap={2} onClick={this.handleClick}>
+                    <Box>
+                      <Avatar
+                        sx={{ width: 30, height: 30 }}
+                        src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureURL}`}
                       />
-                    </Button>
-                    <Button type="submit" variant="contained">
-                      Add Post
-                    </Button>
+                    </Box>
+                    <Box>
+                      <Typography>{this.props.user.username}</Typography>
+                    </Box>
                   </Stack>
-                </form>
-              </Box>
-            ) : (
-              <span></span>
-            )}
+                  <input
+                    id="content"
+                    type="text"
+                    ref={(input) => {
+                      this.postDescritpion = input;
+                    }}
+                    className="form-control"
+                    placeholder="What's on your mind?"
+                    required
+                  />
+                  {this.state.value ? (
+                    <FileCard
+                      {...this.state.value}
+                      onDelete={this.removeFile}
+                      info
+                      preview
+                      style={{ width: "100%" }}
+                    />
+                  ) : (
+                    <FileInputButton
+                      onChange={(files) => {
+                        this.updateFiles(files);
+                        this.props.captureFile(files);
+                      }}
+                      accept="image/*"
+                      style={{ width: "100%" }}
+                    />
+                  )}
+                  <Button type="submit" variant="contained">
+                    Add Post
+                  </Button>
+                </Stack>
+              </form>
+            </Box>
           </AddPostContainer>
         </Modal>
       </>

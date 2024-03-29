@@ -4,6 +4,7 @@ import {
   Badge,
   Box,
   Button,
+  Paper,
   Stack,
   Typography,
   styled,
@@ -40,13 +41,14 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
 
 class Rightbar extends Component {
   render() {
+    const { appUsers } = this.props;
     return (
       <Box p={2} flex={2} sx={{ display: { xs: "none", sm: "block" } }}>
         <Box sx={{ position: "fixed", width: "500px" }}>
-          <Box sx={{ mb: 10 }}>
+          <Paper sx={{ mb: 10, padding: 2 }} elevation={3}>
             <Typography variant="body1">Suggested For You</Typography>
             <Stack flexDirection={"column"} gap={3} sx={{ padding: "5px" }}>
-              {this.props.userLists.map((user, index) => (
+              {appUsers.map((user, index) => (
                 <Stack
                   key={index}
                   direction={"row"}
@@ -55,14 +57,14 @@ class Rightbar extends Component {
                 >
                   <Avatar
                     alt={user.username}
-                    src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${user.profilePictureHash}`}
+                    src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${user.profilePictureURL}`}
                   />
                   <Typography variant="body1">{user.username}</Typography>
                   <Button>Follow</Button>
                 </Stack>
               ))}
             </Stack>
-          </Box>
+          </Paper>
         </Box>
       </Box>
     );

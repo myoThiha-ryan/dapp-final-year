@@ -126,33 +126,19 @@ class Navbar extends Component {
                 <Notifications />
               </Badge>
             </Box>
-            {this.props.account ? (
-              <Box>
-                {this.props.user.username ? (
-                  <Stack direction={"row"} gap={2} onClick={this.handleClick}>
-                    <Box>
-                      <Avatar
-                        sx={{ width: 30, height: 30 }}
-                        src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureHash}`}
-                      />
-                    </Box>
-                    <Box>
-                      <Typography>{this.props.user.username}</Typography>
-                    </Box>
-                  </Stack>
-                ) : (
-                  <Button variant="contained" onClick={this.handleModalOpen}>
-                    Create Account
-                  </Button>
-                )}
-              </Box>
-            ) : (
-              <Box>
-                <Button variant="contained" onClick={this.props.connectWallet}>
-                  Connect Wallet
-                </Button>
-              </Box>
-            )}
+            <Box>
+              <Stack direction={"row"} gap={2} onClick={this.handleClick}>
+                <Box>
+                  <Avatar
+                    sx={{ width: 30, height: 30 }}
+                    src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureURL}`}
+                  />
+                </Box>
+                <Box>
+                  <Typography>{this.props.user.username}</Typography>
+                </Box>
+              </Stack>
+            </Box>
           </IconsContainer>
         </StyledToolbar>
         <Menu

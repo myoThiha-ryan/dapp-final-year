@@ -2,52 +2,118 @@ pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 contract Decentragram {
-    string public name;
+    string public contractName;
+    address public admin;
+    address[] internal addresses;
+    mapping(string => address) internal names;
+    // to map from the user account address to related profile struct
+    mapping(address => Profile) public profiles;
+    mapping(address => mapping(address => Profile)) internal followers;
+    mapping(address => mapping(address => Profile)) internal following;
+    // to map from the author's account address to the array of related posts created
+    mapping(address => Post[]) internal posts;
+    mapping(address => uint[]) internal likedPosts;
+    mapping(address => uint[]) internal dislikedPosts;
 
-    struct User {
+    //GREATING DI
+    uint256 public _postID;
+    uint256 public _userID;
+
+    // Profile
+    struct Profile {
+        address owner;
         string username;
         string biography;
-        string profilePictureHash;
-        Friend[] friends;
+        string profilePictureURL;
+        uint timeCreated;
+        uint id;
+        uint postCount;
+        uint followerCount;
+        uint followingCount;
+        address[] followers;
+        address[] following;
     }
 
-    struct Friend {
-        address pubkey;
-        string username;
-    }
+    // struct User {
+    //     string username;
+    //     string biography;
+    //     string profilePictureURL;
+    //     Friend[] friends;
+    // }
+
+    // struct Friend {
+    //     address pubkey;
+    //     string username;
+    // }
 
     struct Post {
-        uint id;
+        uint postId;
         address payable author;
         string username;
-        string profilePictureHash;
-        string imgHash;
-        string content;
-        uint timestamp;
+        string profilePictureURL;
+        string postType;
+        string postURL;
+        string postDescription;
+        uint timeCreated;
         uint tipAmount;
         uint likes;
         uint dislikes;
     }
 
     struct AllUserStruct {
+        address owner;
         string username;
         string biography;
-        string profilePictureHash;
-        address accountAddress;
+        string profilePictureURL;
+        uint timeCreated;
+        uint id;
+        uint postCount;
+        uint followerCount;
+        uint followingCount;
     }
 
     AllUserStruct[] getAllUsers; // array to store all the registered users
-    Post[] allPosts; // array to store all posts created in the application
 
-    // to map from the user account address to related User struct
-    mapping(address => User) public users;
+    // Check if message sender has a created profile
+    modifier senderHasProfile() {
+        require(
+            profiles[msg.sender].owner != address(0x0),
+            "ERROR: <Must create a profile to perform this action>"
+        );
+        _;
+    }
 
-    // to map from the author's account address to the array of related posts created
-    mapping(address => Post[]) public posts;
+    // Check if a specified address has created a profile
+    modifier profileExists(address _address) {
+        require(
+            profiles[_address].owner != address(0x0),
+            "ERROR: <Profile does not exist>"
+        );
+        _;
+    }
+
+    // Check that the message sender is not specifying an address that is itself
+    modifier notSelf(address _address) {
+        require(
+            msg.sender != _address,
+            "ERROR <You cannot follow/unfollow yourself"
+        );
+        _;
+    }
+
+    // Check that the input is not empty
+    modifier nonEmptyInput(string memory _input) {
+        require(
+            keccak256(abi.encodePacked(_input)) !=
+                keccak256(abi.encodePacked("")),
+            "ERROR: <Input cannot be empty>"
+        );
+        _;
+    }
 
     // events for contract
 
-    event UserCreated(string username, string biography, string profileImgHash);
+    /*event UserCreated(string username, string biography, string profileImgHash);
     event PostCreated(
         uint id,
         address payable postAuthor,
@@ -98,127 +164,250 @@ contract Decentragram {
         uint tipAmount,
         address payable author
     );
-
+    */
     constructor() public {
-        name = "Decentragram";
+        contractName = "Decentragram";
+        admin = msg.sender;
     }
 
-    function checkUserExists(address _pubkey) public view returns (bool) {
-        return bytes(users[_pubkey].username).length > 0;
-    }
-
+    // Create a new profile from a given username
     function createAccount(
         string memory _username,
         string memory _biography,
-        string memory _profilePictureHash
-    ) public {
-        require(checkUserExists(msg.sender) == false, "User already exists");
-        require(bytes(_username).length > 0);
+        string memory _profilePictureURL
+    ) public nonEmptyInput(_username) {
+        // Checks that the current account did not already make a profile and did not choose a taken username
+        require(
+            profiles[msg.sender].owner == address(0x0),
+            "ERROR: <You have already created an account>"
+        );
+        require(names[_username] == address(0x0), "ERROR: <Username taken>");
+        //Increment User ID
+        _userID++;
+        uint256 userID = _userID;
 
-        users[msg.sender].username = _username;
-        users[msg.sender].biography = _biography;
-        users[msg.sender].profilePictureHash = _profilePictureHash;
+        // Updates username list
+        names[_username] = msg.sender;
+
+        // Create the new profile object and add it to "profiles" mapping
+        profiles[msg.sender] = Profile({
+            owner: msg.sender,
+            username: _username,
+            biography: _biography,
+            profilePictureURL: _profilePictureURL,
+            timeCreated: block.timestamp,
+            id: userID,
+            postCount: 0,
+            followerCount: 0,
+            followingCount: 0,
+            followers: new address[](0x0),
+            following: new address[](0x0)
+        });
+
+        // Add address to list of global addresses
+        addresses.push(msg.sender);
+
+        // users[msg.sender].username = _username;
+        // users[msg.sender].biography = _biography;
+        // users[msg.sender].profilePictureHash = _profilePictureHash;
+
         getAllUsers.push(
             AllUserStruct(
+                msg.sender,
                 _username,
                 _biography,
-                _profilePictureHash,
-                msg.sender
+                _profilePictureURL,
+                block.timestamp,
+                userID,
+                0,
+                0,
+                0
             )
         );
     }
 
-    function getUsername(address _pubkey) public view returns (string memory) {
-        require(checkUserExists(_pubkey), "User is not registered");
-        return users[_pubkey].username;
-    }
-
-    function getUser(address _pubkey) public view returns (User memory) {
-        require(checkUserExists(_pubkey), "User is not registered");
-        return users[_pubkey];
-    }
-
-    function uploadImage(
-        string memory _imgHash,
-        string memory _description
-    ) public {
-        // Make sure the image hash exists
-        require(bytes(_imgHash).length > 0);
-        // Make sure image description exists
-        require(bytes(_description).length > 0);
-        // Make sure uploader address exists
-        require(msg.sender != address(0));
-
-        // Increment image id
-        imageCount++;
-
-        // Add Image to the contract
-        images[imageCount] = Image(
-            imageCount,
-            _imgHash,
-            _description,
-            0,
-            msg.sender
+    // Follow a new profile
+    function follow(
+        address _address
+    ) external senderHasProfile profileExists(_address) notSelf(_address) {
+        require(
+            following[msg.sender][_address].owner == address(0x0),
+            "ERROR: <You already follow this profile>"
         );
-        // Trigger an event
-        emit ImageCreated(imageCount, _imgHash, _description, 0, msg.sender);
+
+        // Add entry to "followers" and "following" mappings
+        followers[_address][msg.sender] = profiles[msg.sender];
+        following[msg.sender][_address] = profiles[_address];
+
+        // Add element to "followers" and "following" arrays in both Profile objects
+        profiles[_address].followers.push(msg.sender);
+        profiles[msg.sender].following.push(_address);
+
+        // Increment "followerCount" and "followingCount" in both Profile objects
+        profiles[_address].followerCount++;
+        profiles[msg.sender].followingCount++;
     }
 
-    function createPost(string memory _content, string memory _imgHash) public {
-        require(checkUserExists(msg.sender), "Create an account first");
+    // Unfollow a profile
+    // This deletion operation has a time complexity of O(N), is there a better way to do this?
+    function unfollow(
+        address _address
+    ) external senderHasProfile profileExists(_address) notSelf(_address) {
+        require(
+            following[msg.sender][_address].owner != address(0x0),
+            "ERROR: <You already do not follow this profile>"
+        );
+
+        // Delete entry from "followers" and "following" mappings
+        delete followers[_address][msg.sender];
+        delete following[msg.sender][_address];
+
+        // Delete element from "followers" array in Profile object and decrement followerCount
+        for (uint i = 0; i < profiles[_address].followerCount; i++) {
+            if (profiles[_address].followers[i] == msg.sender) {
+                delete profiles[_address].followers[i];
+                profiles[_address].followerCount--;
+                break;
+            }
+        }
+
+        // Delete element from "following" array in Profile object and decrement followingCount
+        for (uint i = 0; i < profiles[msg.sender].followingCount; i++) {
+            if (profiles[msg.sender].following[i] == _address) {
+                delete profiles[msg.sender].following[i];
+                profiles[msg.sender].followingCount--;
+                break;
+            }
+        }
+    }
+
+    //Create a Post
+    function createPost(
+        string memory _postDescription,
+        string memory _postURL,
+        string memory _postType
+    ) public senderHasProfile {
+        _postID++;
+        uint256 postID = _postID;
 
         Post memory newPost = Post({
-            id: posts[msg.sender].length,
+            postId: postID,
             author: msg.sender,
-            username: users[msg.sender].username,
-            profilePictureHash: users[msg.sender].profilePictureHash,
-            content: _content,
-            imgHash: _imgHash,
-            timestamp: block.timestamp,
+            username: profiles[msg.sender].username,
+            profilePictureURL: profiles[msg.sender].profilePictureURL,
+            postType: _postType,
+            postURL: _postURL,
+            postDescription: _postDescription,
+            timeCreated: block.timestamp,
+            tipAmount: 0,
             likes: 0,
-            dislikes: 0,
-            tipAmount: 0
+            dislikes: 0
         });
 
-        posts[msg.sender].push(newPost);
-        allPosts.push(newPost);
+        // Add entry to "posts" mappings
+        posts[newPost.author].push(newPost);
+
+        // Increment "postCount" in Profile object
+        profiles[newPost.author].postCount++;
     }
 
-    function likePost(address _author, uint _id) external {
-        require(checkUserExists(msg.sender), "Create an account first");
-        require(posts[_author][_id].id == _id, "Post does not exist");
-        posts[_author][_id].likes++;
-
-        // Emit the PostLiked event
+    // like post
+    function likePost(uint256 _postId) external senderHasProfile {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    posts[addresses[i]][j].likes++;
+                    likedPosts[msg.sender].push(_postId);
+                    break;
+                }
+            }
+        }
+    }
+    // Unlike post
+    function unlikePost(uint256 _postId) external senderHasProfile {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    posts[addresses[i]][j].likes--;
+                    break;
+                }
+            }
+        }
+        for (uint i = 0; i < likedPosts[msg.sender].length; i++) {
+            if (_postId == likedPosts[msg.sender][i]) {
+                likedPosts[msg.sender][i] = likedPosts[msg.sender][
+                    likedPosts[msg.sender].length - 1
+                ];
+                likedPosts[msg.sender].pop();
+                break;
+            }
+        }
     }
 
-    function unlikePost(address _author, uint _id) external {
-        require(checkUserExists(msg.sender), "Create an account first");
-        require(posts[_author][_id].id == _id, "Post does not exist");
-        require(posts[_author][_id].likes > 0, "Post has no likes");
-        posts[_author][_id].likes--;
-
-        // Emit the PostUnliked event
+    // dislike post
+    function dislikePost(uint256 _postId) external senderHasProfile {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    posts[addresses[i]][j].dislikes++;
+                    dislikedPosts[msg.sender].push(_postId);
+                    break;
+                }
+            }
+        }
     }
 
-    function dislikePost(address _author, uint _id) external {
-        require(checkUserExists(msg.sender), "Create an account first");
-        require(posts[_author][_id].id == _id, "Post does not exist");
-        posts[_author][_id].dislikes++;
-
-        // Emit the PostDisliked event
+    // undislike post
+    function undislikePost(uint256 _postId) external senderHasProfile {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    posts[addresses[i]][j].dislikes--;
+                    break;
+                }
+            }
+        }
+        for (uint i = 0; i < dislikedPosts[msg.sender].length; i++) {
+            if (_postId == dislikedPosts[msg.sender][i]) {
+                dislikedPosts[msg.sender][i] = dislikedPosts[msg.sender][
+                    dislikedPosts[msg.sender].length - 1
+                ];
+                dislikedPosts[msg.sender].pop();
+                break;
+            }
+        }
     }
 
-    function unDislikePost(address _author, uint _id) external {
-        require(checkUserExists(msg.sender), "Create an account first");
-        require(posts[_author][_id].id == _id, "Post does not exist");
-        require(posts[_author][_id].dislikes > 0, "Post has no likes");
-        posts[_author][_id].dislikes--;
-
-        // Emit the PostUnDisliked event
+    // tip post
+    function tipPost(uint256 _postId) external payable {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    address payable _author = posts[addresses[i]][j].author;
+                    address(_author).transfer(msg.value);
+                    posts[addresses[i]][j].tipAmount =
+                        posts[addresses[i]][j].tipAmount +
+                        msg.value;
+                    break;
+                }
+            }
+        }
     }
 
-    function tipImageOwner(uint _id) public payable {
+    // tip post
+    /*function tipImageOwner(uint256 _postId) external payable {
+        for (uint i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                if (posts[addresses[i]][j].postId == _postId) {
+                    address payable _author = posts[addresses[i]][j].author;
+                    address(_author).transfer(msg.value);
+                    posts[addresses[i]][j].tipAmount =
+                        posts[addresses[i]][j].tipAmount +
+                        msg.value;
+                    break;
+                }
+            }
+        }
         // Make sure the id is valid
         require(_id > 0 && _id <= imageCount);
         // Fetch the image
@@ -239,72 +428,114 @@ contract Decentragram {
             _image.tipAmount,
             _author
         );
-    }
+    }*/
 
-    function addFriend(address friend_key, string memory _username) public {
-        require(checkUserExists(msg.sender), "Create an account first");
-        require(checkUserExists(friend_key), "User is not registered");
-        require(
-            msg.sender != friend_key,
-            "Users cannot add themselves as friends"
-        );
-        require(
-            checkAlreadyFriends(msg.sender, friend_key) == false,
-            "These users are already friends"
-        );
-        _addFriend(msg.sender, friend_key, _username);
-        _addFriend(friend_key, msg.sender, users[msg.sender].username);
-    }
-
-    function checkAlreadyFriends(
-        address _pubkey1,
-        address _pubkey2
-    ) internal view returns (bool) {
-        if (users[_pubkey1].friends.length > users[_pubkey2].friends.length) {
-            address temp = _pubkey1;
-            _pubkey1 = _pubkey2;
-            _pubkey2 = temp;
-        }
-
-        for (uint i = 0; i < users[_pubkey1].friends.length; i++) {
-            if (users[_pubkey1].friends[i].pubkey == _pubkey2) return true;
-        }
-
-        return false;
-    }
-
-    function _addFriend(
-        address _me,
-        address friend_key,
-        string memory _username
-    ) internal {
-        Friend memory newFriend = Friend(friend_key, _username);
-        users[_me].friends.push(newFriend);
-    }
-
-    function getMyFriendList() external view returns (Friend[] memory) {
-        return users[msg.sender].friends;
-    }
-
+    // Return all registered users
     function getAllAppUser() public view returns (AllUserStruct[] memory) {
         return getAllUsers;
     }
 
-    function getPost(uint _id) public view returns (Post memory) {
-        return posts[msg.sender][_id];
+    // Returns all posts from a given address
+    function getPosts(
+        address _address
+    ) external view profileExists(_address) returns (Post[] memory) {
+        return posts[_address];
     }
 
-    function getAllUserPosts(
-        address _owner
-    ) public view returns (Post[] memory) {
-        return posts[_owner];
+    function getLikedPostIDs(
+        address _address
+    ) external view returns (uint[] memory) {
+        return likedPosts[_address];
     }
 
-    function getAllFeedPosts() public view returns (Post[] memory) {
-        return allPosts;
+    function getDislikedPostIDs(
+        address _address
+    ) external view returns (uint[] memory) {
+        return dislikedPosts[_address];
     }
 
-    uint public imageCount = 0;
+    // Returns total user count
+    function getUserCount() external view returns (uint) {
+        return addresses.length;
+    }
+
+    // Returns all registered addresses
+    function getAddresses() external view returns (address[] memory) {
+        return addresses;
+    }
+
+    // Get all followers of a specific address
+    function getFollowers(
+        address _address
+    ) external view profileExists(_address) returns (address[] memory) {
+        return profiles[_address].followers;
+    }
+
+    // Get all followed accounts of a specific address
+    function getFollowing(
+        address _address
+    ) external view returns (address[] memory) {
+        return profiles[_address].following;
+    }
+
+    function getAllPosts() public view returns (Post[] memory) {
+        uint256 itemCount = 0;
+        for (uint256 i = 0; i < addresses.length; i++) {
+            itemCount += posts[addresses[i]].length;
+        }
+
+        Post[] memory items = new Post[](itemCount);
+        uint256 currentIndex = 0;
+
+        for (uint256 i = 0; i < addresses.length; i++) {
+            for (uint j = 0; j < posts[addresses[i]].length; j++) {
+                items[currentIndex] = posts[addresses[i]][j];
+                currentIndex += 1;
+            }
+        }
+        return items;
+    }
+
+    // GET SINGLE POST
+    // function getSinglePost(
+    //     uint256 _postId
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         address,
+    //         string memory,
+    //         string memory,
+    //         string memory,
+    //         string memory,
+    //         string memory,
+    //         uint,
+    //         uint,
+    //         uint,
+    //         uint
+    //     )
+    // {
+    //     for (uint i = 0; i < addresses.length; i++) {
+    //         for (uint j = 0; j < posts[addresses[i]].length; j++) {
+    //             if (posts[addresses[i]][j].postId == _postId) {
+    //                 return (
+    //                     posts[addresses[i]][j].author,
+    //                     posts[addresses[i]][j].username,
+    //                     posts[addresses[i]][j].profilePictureURL,
+    //                     posts[addresses[i]][j].postType,
+    //                     posts[addresses[i]][j].postURL,
+    //                     posts[addresses[i]][j].postDescription,
+    //                     posts[addresses[i]][j].timeCreated,
+    //                     posts[addresses[i]][j].tipAmount,
+    //                     posts[addresses[i]][j].likes,
+    //                     posts[addresses[i]][j].dislikes
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+
+    /*uint public imageCount = 0;
 
     mapping(address => Image) public statuses;
     mapping(uint => Image) public images;
@@ -315,5 +546,5 @@ contract Decentragram {
         string description;
         uint tipAmount;
         address payable author;
-    }
+    }*/
 }

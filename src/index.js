@@ -3,11 +3,14 @@ import ReactDOM from "react-dom";
 import "bootstrap/dist/css/bootstrap.css";
 import App from "./components/App";
 import { BrowserRouter } from "react-router-dom";
+import { MspaceProvider } from "./context/mspaceContext";
 import * as serviceWorker from "./serviceWorker";
 
 ReactDOM.render(
   <BrowserRouter>
-    <App />
+    <MspaceProvider>
+      <App />
+    </MspaceProvider>
   </BrowserRouter>,
   document.getElementById("root")
 );
