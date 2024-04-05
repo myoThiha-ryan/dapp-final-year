@@ -9,6 +9,7 @@ import {
   Typography,
   styled,
 } from "@mui/material";
+import { MspaceConsumer } from "../context/mspaceContext";
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   "& .MuiBadge-badge": {
@@ -41,32 +42,63 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
 
 class Rightbar extends Component {
   render() {
-    const { appUsers } = this.props;
     return (
-      <Box p={2} flex={2} sx={{ display: { xs: "none", sm: "block" } }}>
-        <Box sx={{ position: "fixed", width: "500px" }}>
-          <Paper sx={{ mb: 10, padding: 2 }} elevation={3}>
-            <Typography variant="body1">Suggested For You</Typography>
-            <Stack flexDirection={"column"} gap={3} sx={{ padding: "5px" }}>
-              {appUsers.map((user, index) => (
-                <Stack
-                  key={index}
-                  direction={"row"}
-                  gap={2}
-                  alignItems={"center"}
-                >
-                  <Avatar
-                    alt={user.username}
-                    src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${user.profilePictureURL}`}
-                  />
-                  <Typography variant="body1">{user.username}</Typography>
-                  <Button>Follow</Button>
-                </Stack>
-              ))}
-            </Stack>
-          </Paper>
-        </Box>
-      </Box>
+      <MspaceConsumer>
+        {(props) => {
+          const { userFollowings, appUsers, userAddress, followUser } = props;
+          let filteredSuggestedUsers;
+          if (userFollowings.length === 0) {
+            filteredSuggestedUsers = appUsers;
+          } else {
+            filteredSuggestedUsers = appUsers.filter((el) => {
+              return !userFollowings.find((element) => {
+                return element.owner === el.owner;
+              });
+            });
+          }
+          return (
+            <Box p={2} flex={2} sx={{ display: { xs: "none", sm: "block" } }}>
+              <Box sx={{ position: "fixed", width: "500px" }}>
+                <Paper sx={{ mb: 10, padding: 2 }} elevation={3}>
+                  <Typography variant="body1">Suggested For You</Typography>
+                  <Stack
+                    flexDirection={"column"}
+                    gap={3}
+                    sx={{ padding: "5px" }}
+                  >
+                    {filteredSuggestedUsers.map(
+                      (user, index) =>
+                        user.owner !== userAddress && (
+                          <Stack
+                            key={index}
+                            direction={"row"}
+                            gap={2}
+                            alignItems={"center"}
+                          >
+                            <Avatar
+                              alt={user.username}
+                              src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${user.profilePictureURL}`}
+                            />
+                            <Typography variant="body1">
+                              {user.username}
+                            </Typography>
+                            <Button
+                              onClick={() => {
+                                followUser(user.owner);
+                              }}
+                            >
+                              Follow
+                            </Button>
+                          </Stack>
+                        )
+                    )}
+                  </Stack>
+                </Paper>
+              </Box>
+            </Box>
+          );
+        }}
+      </MspaceConsumer>
     );
   }
 }

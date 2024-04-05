@@ -109,7 +109,7 @@ class Navbar extends Component {
             variant="h6"
             sx={{ display: { xs: "none", sm: "block" } }}
           >
-            DeSoci
+            MSpace
           </Typography>
           <Facebook sx={{ display: { xs: "block", sm: "none" } }} />
           <Search>

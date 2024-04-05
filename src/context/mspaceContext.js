@@ -196,8 +196,6 @@ export class MspaceProvider extends Component {
         );
 
         this.setState({
-          userAddress: account,
-          decentragram,
           connected: isAccountCreated,
           appUsers: _parsedAppUsers,
           allAppPosts: _parsedAllPosts,
@@ -366,6 +364,15 @@ export class MspaceProvider extends Component {
       });
   };
 
+  followUser = async (address) => {
+    await this.state.decentragram.methods
+      .follow(address)
+      .send({ from: this.state.userAddress })
+      .on("transactionHash", async function() {
+        alert("Successfully Followed");
+      });
+  };
+
   componentDidMount() {
     this.loadWeb3();
     this.loadBlockchainData();
@@ -400,6 +407,7 @@ export class MspaceProvider extends Component {
       tipPost,
       handleLogout,
       captureFile,
+      followUser,
     } = this;
     return (
       <MspaceContext.Provider
@@ -428,6 +436,7 @@ export class MspaceProvider extends Component {
           tipPost,
           handleLogout,
           captureFile,
+          followUser,
         }}
       >
         {this.props.children}

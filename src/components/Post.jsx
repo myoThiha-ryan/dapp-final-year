@@ -76,7 +76,7 @@ class Post extends Component {
                 color="text.secondary"
                 fontWeight={"bold"}
                 component={"a"}
-                href="/profile"
+                href={`/profile/${post.username}`}
               >
                 {post.username} -
               </Typography>

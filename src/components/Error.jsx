@@ -5,7 +5,7 @@ class Error extends Component {
   render() {
     return (
       <Alert variant="outlined" severity="error">
-        This is an outlined error Alert.
+        Not Found Page
       </Alert>
     );
   }

@@ -6,9 +6,11 @@ import Decentragram from "../abis/Decentragram.json";
 import Navbar from "./Navbar";
 import Feed from "./Feed";
 import { MspaceConsumer } from "../context/mspaceContext";
+import { Outlet } from "react-router-dom";
 import {
   Box,
   Button,
+  Divider,
   Stack,
   ThemeProvider,
   Typography,
@@ -83,20 +85,24 @@ class App extends Component {
                 createPost,
                 connected,
                 userAccountDetails,
-                allAppPosts,
                 appUsers,
               } = props;
               // console.log(props);
               return connected ? (
                 <>
                   <Navbar user={userAccountDetails} />
-                  <Stack direction="row" justifyContent="space-between">
+                  <Stack
+                    direction="row"
+                    divider={<Divider orientation="vertical" flexItem />}
+                    justifyContent="space-between"
+                  >
                     <Sidebar
                       theme={this.state.theme}
                       setTheme={this.setTheme}
                     ></Sidebar>
-                    <Feed feedPosts={allAppPosts} />
-                    <Rightbar appUsers={appUsers} />
+                    <Outlet></Outlet>
+                    {/* <Feed feedPosts={allAppPosts} /> */}
+                    <Rightbar appUsers={appUsers} userAddress={userAddress} />
                     <Add
                       account={userAddress}
                       user={userAccountDetails}
