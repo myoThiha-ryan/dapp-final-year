@@ -20,7 +20,10 @@ import {
   Typography,
   styled,
   Stack,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
+import { MspaceConsumer } from "../context/mspaceContext";
 
 const AddPostContainer = styled("div")(({ theme }) => ({
   width: "450px",
@@ -52,7 +55,6 @@ const StyledToolbar = styled(Toolbar)({
 
 const Search = styled("div")(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
-  padding: "7px 13px",
   borderRadius: theme.shape.borderRadius,
   width: "40%",
 }));
@@ -81,16 +83,9 @@ class Navbar extends Component {
     this.state = {
       anchorEl: null,
       open: false,
+      searchValue: "",
     };
   }
-
-  handleModalOpen = () => {
-    this.setState({ open: true });
-  };
-
-  handleModalClose = () => {
-    this.setState({ open: false });
-  };
 
   handleClick = (event) => {
     this.setState({ anchorEl: event.currentTarget });
@@ -101,133 +96,126 @@ class Navbar extends Component {
     console.log("closed");
   };
 
+  handleInputChange = (event) => {
+    this.setState({ searchValue: event.target.value });
+  };
+
+  handleChange = (value) => {
+    this.setState({ searchValue: value });
+    console.log(value);
+  };
+
   render() {
     return (
-      <AppBar position="sticky">
-        <StyledToolbar>
-          <Typography
-            variant="h6"
-            sx={{ display: { xs: "none", sm: "block" } }}
-          >
-            MSpace
-          </Typography>
-          <Facebook sx={{ display: { xs: "block", sm: "none" } }} />
-          <Search>
-            <InputBase fullWidth placeholder="Search..."></InputBase>
-          </Search>
-          <IconsContainer>
-            <Box sx={{ ":hover": { cursor: "pointer" } }}>
-              <Badge badgeContent={4} color="error">
-                <Mail sx={{ color: "white" }} />
-              </Badge>
-            </Box>
-            <Box sx={{ ":hover": { cursor: "pointer" } }}>
-              <Badge badgeContent={2} color="error">
-                <Notifications />
-              </Badge>
-            </Box>
-            <Box>
-              <Stack direction={"row"} gap={2} onClick={this.handleClick}>
-                <Box>
-                  <Avatar
-                    sx={{ width: 30, height: 30 }}
-                    src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureURL}`}
-                  />
-                </Box>
-                <Box>
-                  <Typography>{this.props.user.username}</Typography>
-                </Box>
-              </Stack>
-            </Box>
-          </IconsContainer>
-        </StyledToolbar>
-        <Menu
-          id="demo-positioned-menu"
-          aria-labelledby="demo-positioned-button"
-          open={Boolean(this.state.anchorEl)}
-          anchorEl={this.state.anchorEl}
-          onClose={this.handleClose}
-          anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "left",
-          }}
-          transformOrigin={{
-            vertical: "top",
-            horizontal: "left",
-          }}
-        >
-          <MenuItem>Profile</MenuItem>
-          <MenuItem>My account</MenuItem>
-          <MenuItem onClick={this.props.handleLogout}>Logout</MenuItem>
-        </Menu>
-        <Modal
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          open={this.state.open}
-          onClose={this.handleModalClose}
-          aria-labelledby="modal-modal-title"
-          aria-describedby="modal-modal-description"
-        >
-          <AddPostContainer>
-            <Box>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const username = this.username.value;
-                  const biography = this.biography.value;
-                  const accountAddress = this.props.account;
-                  {
-                    console.log(username, biography, accountAddress);
-                  }
-                  this.props.createAccount(username, biography, accountAddress);
-                }}
-              >
-                <Stack direction={"column"} gap={3}>
-                  <Typography variant="h6">Please Create an Account</Typography>
-                  <input
-                    id="username"
-                    type="text"
-                    ref={(input) => {
-                      this.username = input;
-                    }}
-                    className="form-control"
-                    placeholder="Please type username..."
-                    required
-                  />
-                  <input
-                    id="biography"
-                    type="text"
-                    ref={(input) => {
-                      this.biography = input;
-                    }}
-                    className="form-control"
-                    placeholder="Please type biography..."
-                    required
-                  />
-                  <Button
-                    component="label"
-                    variant="contained"
-                    startIcon={<CloudUpload />}
-                  >
-                    Upload file
-                    <VisuallyHiddenInput
-                      type="file"
-                      accept=".jpg, .jpeg, .png, .bmp, .gif"
-                      onChange={this.props.captureFile}
-                    />
-                  </Button>
-                  <Button type="submit" variant="contained">
-                    Add Post
-                  </Button>
-                </Stack>
-              </form>
-            </Box>
-          </AddPostContainer>
-        </Modal>
-      </AppBar>
+      <MspaceConsumer>
+        {(props) => {
+          const { appUsers, userAddress, connected } = props;
+          return (
+            <AppBar position="sticky">
+              <StyledToolbar>
+                <Typography
+                  variant="h6"
+                  sx={{ display: { xs: "none", sm: "block" } }}
+                >
+                  MSpace
+                </Typography>
+                <Facebook sx={{ display: { xs: "block", sm: "none" } }} />
+                {connected ? (
+                  <>
+                    <Search>
+                      <Autocomplete
+                        id="free-solo-demo"
+                        freeSolo
+                        options={appUsers.map((user) => user.username)}
+                        onInputChange={(event) => {
+                          this.handleInputChange(event);
+                        }}
+                        onChange={(event, value) => {
+                          this.handleChange(value);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            window.location.href = `/profile/${this.state.searchValue}`;
+                          }
+                        }}
+                        renderInput={(params) => (
+                          <TextField {...params} label="Search..." />
+                        )}
+                        fullWidth
+                      />
+                    </Search>
+                    <IconsContainer>
+                      <Box sx={{ ":hover": { cursor: "pointer" } }}>
+                        <Badge badgeContent={4} color="error">
+                          <Mail sx={{ color: "white" }} />
+                        </Badge>
+                      </Box>
+                      <Box sx={{ ":hover": { cursor: "pointer" } }}>
+                        <Badge badgeContent={2} color="error">
+                          <Notifications />
+                        </Badge>
+                      </Box>
+                      <Box>
+                        <Stack
+                          direction={"row"}
+                          gap={2}
+                          onClick={this.handleClick}
+                        >
+                          <Box>
+                            <Avatar
+                              sx={{ width: 30, height: 30 }}
+                              src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.props.user.profilePictureURL}`}
+                            />
+                          </Box>
+                          <Box>
+                            <Typography>{this.props.user.username}</Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    </IconsContainer>
+                    <Menu
+                      id="demo-positioned-menu"
+                      aria-labelledby="demo-positioned-button"
+                      open={Boolean(this.state.anchorEl)}
+                      anchorEl={this.state.anchorEl}
+                      onClose={this.handleClose}
+                      anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "left",
+                      }}
+                      transformOrigin={{
+                        vertical: "top",
+                        horizontal: "left",
+                      }}
+                    >
+                      <MenuItem>Profile</MenuItem>
+                      <MenuItem>My account</MenuItem>
+                      <MenuItem onClick={this.props.handleLogout}>
+                        Logout
+                      </MenuItem>
+                    </Menu>
+                  </>
+                ) : (
+                  <>
+                    <Box>
+                      <img
+                        className="ml-2"
+                        width="30"
+                        height="30"
+                        src={`data:image/png;base64,${new Identicon(
+                          userAddress,
+                          30
+                        ).toString()}`}
+                      />
+                      {userAddress}
+                    </Box>
+                  </>
+                )}
+              </StyledToolbar>
+            </AppBar>
+          );
+        }}
+      </MspaceConsumer>
       /*<nav className="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
         <a
           className="navbar-brand col-sm-3 col-md-2 mr-0"

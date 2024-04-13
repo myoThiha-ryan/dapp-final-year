@@ -102,14 +102,14 @@ contract Decentragram {
     }
 
     // Check that the input is not empty
-    modifier nonEmptyInput(string memory _input) {
-        require(
-            keccak256(abi.encodePacked(_input)) !=
-                keccak256(abi.encodePacked("")),
-            "ERROR: <Input cannot be empty>"
-        );
-        _;
-    }
+    // modifier nonEmptyInput(string memory _input) {
+    //     require(
+    //         keccak256(abi.encodePacked(_input)) !=
+    //             keccak256(abi.encodePacked("")),
+    //         "ERROR: <Input cannot be empty>"
+    //     );
+    //     _;
+    // }
 
     // events for contract
 
@@ -175,7 +175,7 @@ contract Decentragram {
         string memory _username,
         string memory _biography,
         string memory _profilePictureURL
-    ) public nonEmptyInput(_username) {
+    ) public {
         // Checks that the current account did not already make a profile and did not choose a taken username
         require(
             profiles[msg.sender].owner == address(0x0),
@@ -230,11 +230,6 @@ contract Decentragram {
     function follow(
         address _address
     ) external senderHasProfile profileExists(_address) notSelf(_address) {
-        require(
-            following[msg.sender][_address].owner == address(0x0),
-            "ERROR: <You already follow this profile>"
-        );
-
         // Add entry to "followers" and "following" mappings
         followers[_address][msg.sender] = profiles[msg.sender];
         following[msg.sender][_address] = profiles[_address];
@@ -246,6 +241,16 @@ contract Decentragram {
         // Increment "followerCount" and "followingCount" in both Profile objects
         profiles[_address].followerCount++;
         profiles[msg.sender].followingCount++;
+
+        // Increment "followerCount" and "followingCount" in both All Users objects
+        for (uint256 i = 0; i < getAllUsers.length; i++) {
+            if (getAllUsers[i].owner == _address) {
+                getAllUsers[i].followerCount++;
+            }
+            if (getAllUsers[i].owner == msg.sender) {
+                getAllUsers[i].followingCount++;
+            }
+        }
     }
 
     // Unfollow a profile
@@ -253,11 +258,6 @@ contract Decentragram {
     function unfollow(
         address _address
     ) external senderHasProfile profileExists(_address) notSelf(_address) {
-        require(
-            following[msg.sender][_address].owner != address(0x0),
-            "ERROR: <You already do not follow this profile>"
-        );
-
         // Delete entry from "followers" and "following" mappings
         delete followers[_address][msg.sender];
         delete following[msg.sender][_address];
@@ -265,7 +265,10 @@ contract Decentragram {
         // Delete element from "followers" array in Profile object and decrement followerCount
         for (uint i = 0; i < profiles[_address].followerCount; i++) {
             if (profiles[_address].followers[i] == msg.sender) {
-                delete profiles[_address].followers[i];
+                profiles[_address].followers[i] = profiles[_address].followers[
+                    profiles[_address].followers.length - 1
+                ];
+                profiles[_address].followers.pop();
                 profiles[_address].followerCount--;
                 break;
             }
@@ -274,9 +277,21 @@ contract Decentragram {
         // Delete element from "following" array in Profile object and decrement followingCount
         for (uint i = 0; i < profiles[msg.sender].followingCount; i++) {
             if (profiles[msg.sender].following[i] == _address) {
-                delete profiles[msg.sender].following[i];
+                profiles[msg.sender].following[i] = profiles[msg.sender]
+                    .following[profiles[msg.sender].following.length - 1];
+                profiles[msg.sender].following.pop();
                 profiles[msg.sender].followingCount--;
                 break;
+            }
+        }
+
+        // Decrement "followerCount" and "followingCount" in both All Users objects
+        for (uint256 i = 0; i < getAllUsers.length; i++) {
+            if (getAllUsers[i].owner == _address) {
+                getAllUsers[i].followerCount--;
+            }
+            if (getAllUsers[i].owner == msg.sender) {
+                getAllUsers[i].followingCount--;
             }
         }
     }
@@ -309,6 +324,12 @@ contract Decentragram {
 
         // Increment "postCount" in Profile object
         profiles[newPost.author].postCount++;
+        // Increment "postCount" in All User object
+        for (uint256 i = 0; i < getAllUsers.length; i++) {
+            if (getAllUsers[i].owner == newPost.author) {
+                getAllUsers[i].postCount++;
+            }
+        }
     }
 
     // like post

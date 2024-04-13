@@ -72,51 +72,47 @@ class App extends Component {
   render() {
     return (
       <ThemeProvider theme={this.state.modeTheme}>
-        <Box
-          bgcolor={"background.default"}
-          color={"text.primary"}
-          height={"100%"}
-        >
-          <MspaceConsumer>
-            {(props) => {
-              const {
-                userAddress,
-                captureFile,
-                createPost,
-                connected,
-                userAccountDetails,
-                appUsers,
-              } = props;
-              // console.log(props);
-              return connected ? (
-                <>
-                  <Navbar user={userAccountDetails} />
-                  <Stack
-                    direction="row"
-                    divider={<Divider orientation="vertical" flexItem />}
-                    justifyContent="space-between"
-                  >
-                    <Sidebar
-                      theme={this.state.theme}
-                      setTheme={this.setTheme}
-                    ></Sidebar>
-                    <Outlet></Outlet>
-                    {/* <Feed feedPosts={allAppPosts} /> */}
-                    <Rightbar appUsers={appUsers} userAddress={userAddress} />
-                    <Add
-                      account={userAddress}
-                      user={userAccountDetails}
-                      captureFile={captureFile}
-                      createPost={createPost}
-                    ></Add>
-                  </Stack>
-                </>
-              ) : (
-                <AccountRegistration />
-              );
-            }}
-          </MspaceConsumer>
-          {/* {this.state.account ? (
+        <MspaceConsumer>
+          {(props) => {
+            const {
+              userAddress,
+              captureFile,
+              createPost,
+              connected,
+              userAccountDetails,
+              appUsers,
+            } = props;
+            console.log("From App: ", userAccountDetails);
+            return connected ? (
+              <>
+                <Navbar user={userAccountDetails} />
+                <Stack
+                  direction="row"
+                  bgcolor={"background.default"}
+                  color={"text.primary"}
+                  divider={<Divider orientation="vertical" flexItem />}
+                  justifyContent="space-between"
+                  sx={{ height: "100vh" }}
+                >
+                  <Sidebar
+                    theme={this.state.theme}
+                    setTheme={this.setTheme}
+                  ></Sidebar>
+                  <Outlet></Outlet>
+                  <Add
+                    account={userAddress}
+                    user={userAccountDetails}
+                    captureFile={captureFile}
+                    createPost={createPost}
+                  ></Add>
+                </Stack>
+              </>
+            ) : (
+              <Welcome />
+            );
+          }}
+        </MspaceConsumer>
+        {/* {this.state.account ? (
             <AccountRegistration
               captureFile={this.captureFile}
               createAccount={this.createAccount}
@@ -124,7 +120,7 @@ class App extends Component {
           ) : (
             <Welcome connectWallet={this.connectWallet} />
           )} */}
-          {/* <Navbar
+        {/* <Navbar
             account={this.state.account}
             user={this.state.user}
             userName={this.state.userName}
@@ -167,7 +163,6 @@ class App extends Component {
             createPost={this.createPost}
             tipImageOwner={this.tipImageOwner}
           ></Add> */}
-        </Box>
       </ThemeProvider>
     );
   }

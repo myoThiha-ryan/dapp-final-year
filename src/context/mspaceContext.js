@@ -373,6 +373,15 @@ export class MspaceProvider extends Component {
       });
   };
 
+  unFollowUser = async (address) => {
+    await this.state.decentragram.methods
+      .unfollow(address)
+      .send({ from: this.state.userAddress })
+      .on("transactionHash", async function() {
+        alert("Successfully Unfollowed");
+      });
+  };
+
   componentDidMount() {
     this.loadWeb3();
     this.loadBlockchainData();
@@ -380,6 +389,7 @@ export class MspaceProvider extends Component {
 
   render() {
     const {
+      decentragram,
       userAddress,
       totalUser,
       appUsers,
@@ -408,10 +418,12 @@ export class MspaceProvider extends Component {
       handleLogout,
       captureFile,
       followUser,
+      unFollowUser,
     } = this;
     return (
       <MspaceContext.Provider
         value={{
+          decentragram,
           userAddress,
           totalUser,
           appUsers,
@@ -437,6 +449,7 @@ export class MspaceProvider extends Component {
           handleLogout,
           captureFile,
           followUser,
+          unFollowUser,
         }}
       >
         {this.props.children}

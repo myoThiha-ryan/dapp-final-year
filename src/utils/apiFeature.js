@@ -74,3 +74,16 @@ export const convertTime = (time) => {
 
   return realTime;
 };
+
+export const convertDate = (time) => {
+  const newTime = new Date(time * 1000);
+  const realDate =
+    " Date: " +
+    newTime.getDate() +
+    "/" +
+    (newTime.getMonth() + 1) +
+    "/" +
+    newTime.getFullYear();
+
+  return realDate;
+};

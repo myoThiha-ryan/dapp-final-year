@@ -45,7 +45,7 @@ class Post extends Component {
     }
 
     return (
-      <Card sx={{ maxWidth: 400, mb: "10px" }}>
+      <Card sx={{ maxWidth: 430, mb: "12px", borderRadius: "0" }}>
         <CardHeader
           avatar={
             <Box>

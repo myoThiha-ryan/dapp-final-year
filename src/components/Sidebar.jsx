@@ -65,7 +65,7 @@ class Sidebar extends Component {
                     </ListItemButton>
                   </ListItem>
                   <ListItem disablePadding>
-                    <ListItemButton component="a" href="#friends">
+                    <ListItemButton component="a" href="/friends">
                       <ListItemIcon>
                         <People />
                       </ListItemIcon>
@@ -73,7 +73,7 @@ class Sidebar extends Component {
                     </ListItemButton>
                   </ListItem>
                   <ListItem disablePadding>
-                    <ListItemButton component="a" href="#settings">
+                    <ListItemButton component="a" href="/settings">
                       <ListItemIcon>
                         <Settings />
                       </ListItemIcon>
