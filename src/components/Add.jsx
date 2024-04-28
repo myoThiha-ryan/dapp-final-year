@@ -10,6 +10,8 @@ import {
   styled,
   Avatar,
   Stack,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
 import { Add as AddIcon } from "@mui/icons-material";
 import { FileInputButton, FileCard } from "@files-ui/react";
@@ -41,6 +43,7 @@ class Add extends Component {
     this.state = {
       open: false,
       value: "",
+      error: "",
     };
   }
 
@@ -49,7 +52,7 @@ class Add extends Component {
   };
 
   handleClose = () => {
-    this.setState({ open: false });
+    this.setState({ open: false, error: "" });
   };
 
   updateFiles = (incomingFiles) => {
@@ -95,7 +98,11 @@ class Add extends Component {
                   event.preventDefault();
                   const postDescritpion = this.postDescritpion.value;
                   const postType = "jpg";
-                  this.props.createPost(postDescritpion, postType);
+                  if (postDescritpion === "") {
+                    this.setState({ error: "Post Description is Required!" });
+                  } else {
+                    this.props.createPost(postDescritpion, postType);
+                  }
                 }}
               >
                 <Stack direction={"column"} gap={3}>
@@ -118,7 +125,6 @@ class Add extends Component {
                     }}
                     className="form-control"
                     placeholder="What's on your mind?"
-                    required
                   />
                   {this.state.value ? (
                     <FileCard
@@ -146,6 +152,40 @@ class Add extends Component {
             </Box>
           </AddPostContainer>
         </Modal>
+        {this.state.error && (
+          <Modal
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+            }}
+            open={this.state.error ? true : false}
+            onClose={this.handleClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Alert severity="error" sx={{ width: "400px", height: "100px" }}>
+              <AlertTitle>Error</AlertTitle>
+              {this.state.error}
+            </Alert>
+          </Modal>
+        )}
+        {this.props.success && (
+          <Modal
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+            }}
+            open={this.props.success ? true : false}
+            onClose={this.handleClose}
+            aria-labelledby="modal-modal-title"
+            aria-describedby="modal-modal-description"
+          >
+            <Alert severity="success" sx={{ width: "400px", height: "100px" }}>
+              <AlertTitle>Success</AlertTitle>
+              {this.props.success}
+            </Alert>
+          </Modal>
+        )}
       </>
     );
   }

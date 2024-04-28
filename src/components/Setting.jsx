@@ -2,13 +2,14 @@ import React, { Component } from "react";
 import { MspaceConsumer } from "../context/mspaceContext";
 import {
   Avatar,
-  Badge,
   Box,
   Button,
-  Paper,
   styled,
   Stack,
   Typography,
+  Modal,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
 import { TextareaAutosize as BaseTextareaAutosize } from "@mui/base/TextareaAutosize";
 import { FileInputButton, FileCard } from "@files-ui/react";
@@ -76,6 +77,8 @@ export class Setting extends Component {
     super(props);
     this.state = {
       value: "",
+      open: false,
+      error: "",
     };
   }
   updateFiles = (incomingFiles) => {
@@ -87,82 +90,148 @@ export class Setting extends Component {
     this.setState({ value: undefined });
   };
 
+  handleClose = () => {
+    this.setState({ open: false, error: "" });
+  };
+
   render() {
     return (
       <MspaceConsumer>
         {(props) => {
-          const { userAccountDetails, captureFile } = props;
+          const {
+            userAccountDetails,
+            captureFile,
+            editProfile,
+            success,
+          } = props;
           return (
-            <Stack p={4} flex={6} sx={{ display: { xs: "none", sm: "block" } }}>
-              <form
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const username = this.username.value;
-                  const biography = this.biography.value;
-                  {
-                    console.log(username, biography);
-                  }
-                  // createAccount(username, biography);
-                }}
+            <>
+              <Stack
+                p={4}
+                flex={6}
+                sx={{ display: { xs: "none", sm: "block" } }}
               >
-                <Stack gap={4}>
-                  <Typography variant="h6">Edit Profile</Typography>
-                  <Stack direction={"row"} alignItems={"center"} gap={3}>
-                    <Avatar
-                      alt={userAccountDetails.username}
-                      src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${userAccountDetails.profilePictureURL}`}
-                      sx={{ width: "100px", height: "100px" }}
+                <form
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const address = userAccountDetails.owner;
+                    const username = this.username.value;
+                    const biography = this.biography.value;
+                    const file = this.file;
+                    if (username === "") {
+                      this.setState({ error: "Username is required!" });
+                    } else {
+                      editProfile(address, username, biography);
+                    }
+                  }}
+                >
+                  <Stack gap={4}>
+                    <Typography variant="h6">Edit Profile</Typography>
+                    <Stack direction={"row"} alignItems={"center"} gap={3}>
+                      <Avatar
+                        alt={userAccountDetails.username}
+                        src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${userAccountDetails.profilePictureURL}`}
+                        sx={{ width: "100px", height: "100px" }}
+                      />
+                      <Box>
+                        <Typography variant="body1">
+                          {userAccountDetails.username}
+                        </Typography>
+                        <Typography variant="body1">
+                          Joined Since -{" "}
+                          {convertDate(userAccountDetails.timeCreated)}
+                        </Typography>
+                      </Box>
+                      {this.state.value ? (
+                        <FileCard
+                          {...this.state.value}
+                          onDelete={this.removeFile}
+                          info
+                          preview
+                          style={{ width: "200px" }}
+                        />
+                      ) : (
+                        <FileInputButton
+                          onChange={(files) => {
+                            this.updateFiles(files);
+                            captureFile(files);
+                          }}
+                          accept="image/*"
+                          style={{ width: "150px" }}
+                        >
+                          Change Photo
+                        </FileInputButton>
+                      )}
+                    </Stack>
+                    <Typography variant="body2">Username</Typography>
+                    <Textarea
+                      aria-label="minimum height"
+                      minRows={3}
+                      defaultValue={userAccountDetails.username}
+                      ref={(input) => {
+                        this.username = input;
+                      }}
                     />
-                    <Box>
-                      <Typography variant="body1">
-                        {userAccountDetails.username}
-                      </Typography>
-                      <Typography variant="body1">
-                        Joined Since -{" "}
-                        {convertDate(userAccountDetails.timeCreated)}
-                      </Typography>
-                    </Box>
-                    {this.state.value ? (
-                      <FileCard
-                        {...this.state.value}
-                        onDelete={this.removeFile}
-                        info
-                        preview
-                        style={{ width: "200px" }}
-                      />
-                    ) : (
-                      <FileInputButton
-                        onChange={(files) => {
-                          this.updateFiles(files);
-                          captureFile(files);
-                        }}
-                        accept="image/*"
-                        style={{ width: "100px" }}
-                      />
-                    )}
+                    <Typography variant="body2">Biography</Typography>
+                    <Textarea
+                      aria-label="minimum height"
+                      minRows={3}
+                      defaultValue={userAccountDetails.biography}
+                      ref={(input) => {
+                        this.biography = input;
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      style={{ width: "100px" }}
+                    >
+                      Submit
+                    </Button>
                   </Stack>
-                  <Typography variant="body2">Username</Typography>
-                  <Textarea
-                    aria-label="minimum height"
-                    minRows={3}
-                    value={userAccountDetails.username}
-                  />
-                  <Typography variant="body2">Biography</Typography>
-                  <Textarea
-                    aria-label="minimum height"
-                    minRows={3}
-                    value={userAccountDetails.biography}
-                  />
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    style={{ width: "100px" }}
+                </form>
+              </Stack>
+              {this.state.error && (
+                <Modal
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  open={this.state.error ? true : false}
+                  onClose={this.handleClose}
+                  aria-labelledby="modal-modal-title"
+                  aria-describedby="modal-modal-description"
+                >
+                  <Alert
+                    severity="error"
+                    sx={{ width: "400px", height: "100px" }}
                   >
-                    Submit
-                  </Button>
-                </Stack>
-              </form>
-            </Stack>
+                    <AlertTitle>Error</AlertTitle>
+                    {this.state.error}
+                  </Alert>
+                </Modal>
+              )}
+              {success && (
+                <Modal
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  open={success ? true : false}
+                  onClose={this.handleClose}
+                  aria-labelledby="modal-modal-title"
+                  aria-describedby="modal-modal-description"
+                >
+                  <Alert
+                    severity="success"
+                    sx={{ width: "400px", height: "100px" }}
+                  >
+                    <AlertTitle>Success</AlertTitle>
+                    {success}
+                  </Alert>
+                </Modal>
+              )}
+            </>
           );
         }}
       </MspaceConsumer>

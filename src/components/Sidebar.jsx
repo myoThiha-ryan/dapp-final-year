@@ -28,12 +28,18 @@ class Sidebar extends Component {
       <MspaceConsumer>
         {(props) => {
           const { userAccountDetails } = props;
+          const currentRoute = window.location.href.slice(21);
+          console.log("Current Route: ", currentRoute);
           return (
             <Box p={2} flex={1} sx={{ display: { xs: "none", sm: "block" } }}>
               <Box position="fixed">
                 <List>
                   <ListItem disablePadding>
-                    <ListItemButton component="a" href="/">
+                    <ListItemButton
+                      component="a"
+                      href="/"
+                      selected={currentRoute === "/"}
+                    >
                       <ListItemIcon>
                         <Home />
                       </ListItemIcon>
@@ -65,7 +71,11 @@ class Sidebar extends Component {
                     </ListItemButton>
                   </ListItem>
                   <ListItem disablePadding>
-                    <ListItemButton component="a" href="/friends">
+                    <ListItemButton
+                      component="a"
+                      href="/friends"
+                      selected={currentRoute === "/friends"}
+                    >
                       <ListItemIcon>
                         <People />
                       </ListItemIcon>
@@ -73,7 +83,11 @@ class Sidebar extends Component {
                     </ListItemButton>
                   </ListItem>
                   <ListItem disablePadding>
-                    <ListItemButton component="a" href="/settings">
+                    <ListItemButton
+                      component="a"
+                      href="/settings"
+                      selected={currentRoute === "/settings"}
+                    >
                       <ListItemIcon>
                         <Settings />
                       </ListItemIcon>
@@ -84,6 +98,7 @@ class Sidebar extends Component {
                     <ListItemButton
                       component="a"
                       href={`/profile/${userAccountDetails.username}`}
+                      selected={currentRoute.slice(0, 8) === "/profile"}
                     >
                       <ListItemIcon>
                         <AccountCircle />

@@ -80,9 +80,8 @@ class App extends Component {
               createPost,
               connected,
               userAccountDetails,
-              appUsers,
+              success,
             } = props;
-            console.log("From App: ", userAccountDetails);
             return connected ? (
               <>
                 <Navbar user={userAccountDetails} />
@@ -104,6 +103,7 @@ class App extends Component {
                     user={userAccountDetails}
                     captureFile={captureFile}
                     createPost={createPost}
+                    success={success}
                   ></Add>
                 </Stack>
               </>

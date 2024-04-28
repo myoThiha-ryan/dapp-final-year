@@ -11,11 +11,19 @@ import {
   Modal,
   Button,
   styled,
+  Card,
+  CardHeader,
+  IconButton,
+  CardMedia,
+  CardContent,
+  CardActions,
 } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import React, { Component } from "react";
 import { MspaceConsumer } from "../context/mspaceContext";
 import { convertDate } from "../utils/apiFeature";
 import withRouter from "./withRouter";
+import { convertTime } from "../utils/apiFeature";
 
 const ModalContainer = styled("div")(({ theme }) => ({
   width: "450px",
@@ -32,6 +40,15 @@ class Profile extends Component {
     this.state = {
       openFollowersModal: false,
       openFollowingModal: false,
+      openPostModal: false,
+      profilePictureURL: "",
+      username: "",
+      timeCreated: "",
+      postURL: "",
+      postDescription: "",
+      tipAmount: "",
+      likes: "",
+      dislikes: "",
     };
   }
 
@@ -52,6 +69,24 @@ class Profile extends Component {
   handleCloseFollowingModal = () => {
     this.setState({ openFollowingModal: false });
   };
+
+  handleOpenPostModal = (post) => {
+    this.setState({
+      openPostModal: true,
+      profilePictureURL: post.profilePictureURL,
+      username: post.username,
+      timeCreated: convertTime(post.timeCreated),
+      postURL: post.postURL,
+      postDescription: post.postDescription,
+      tipAmount: post.tipAmount,
+      likes: post.likes,
+      dislikes: post.dislikes,
+    });
+  };
+  handleClosePostModal = () => {
+    this.setState({ openPostModal: false });
+  };
+
   render() {
     return (
       <MspaceConsumer>
@@ -138,7 +173,12 @@ class Profile extends Component {
                   </ListSubheader>
                   <ImageList cols={3}>
                     {userProfilePosts.map((post) => (
-                      <ImageListItem key={post.postID}>
+                      <ImageListItem
+                        key={post.postID}
+                        onClick={() => {
+                          this.handleOpenPostModal(post);
+                        }}
+                      >
                         <img
                           srcSet={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${post.postURL}`}
                           src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${post.postURL}`}
@@ -187,7 +227,7 @@ class Profile extends Component {
                             <Typography variant="body1">
                               {follower.username}
                             </Typography>
-                            <Button>Block</Button>
+                            <Button>Remove</Button>
                           </Stack>
                         );
                       })}
@@ -244,6 +284,96 @@ class Profile extends Component {
                     </Box>
                   </Stack>
                 </ModalContainer>
+              </Modal>
+              <Modal
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                open={this.state.openPostModal}
+                onClose={this.handleClosePostModal}
+                aria-labelledby="modal-modal-title"
+                aria-describedby="modal-modal-description"
+              >
+                <Card sx={{ maxWidth: 430, mb: "12px", borderRadius: "0" }}>
+                  <CardHeader
+                    avatar={
+                      <Box>
+                        <Avatar
+                          sx={{ width: 30, height: 30 }}
+                          src={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.state.profilePictureURL}`}
+                        />
+                      </Box>
+                    }
+                    action={
+                      <IconButton aria-label="settings">
+                        <MoreVertIcon />
+                      </IconButton>
+                    }
+                    title={this.state.username}
+                    subheader={this.state.timeCreated}
+                  />
+                  <CardMedia
+                    component="img"
+                    height="100%"
+                    image={`https://fuchsia-recent-squirrel-434.mypinata.cloud/ipfs/${this.state.postURL}`}
+                  />
+                  <Box>
+                    <CardContent>
+                      <Stack direction={"row"} gap={1}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={"bold"}
+                          component={"a"}
+                          href={`/profile/${this.state.username}`}
+                        >
+                          {this.state.username} -
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {this.state.postDescription}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                    <Divider />
+                    <CardActions
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box>
+                        <small className="float-left mt-1 text-muted">
+                          TIPS:{" "}
+                          {window.web3.utils.fromWei(
+                            this.state.tipAmount.toString(),
+                            "Ether"
+                          )}{" "}
+                          ETH
+                        </small>
+                      </Box>
+                    </CardActions>
+                    <Divider />
+                    <CardActions
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Stack direction={"row"} alignItems={"center"} gap={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Likes: {parseInt(this.state.likes)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Dislikes: {parseInt(this.state.dislikes)}
+                        </Typography>
+                      </Stack>
+                    </CardActions>
+                  </Box>
+                </Card>
               </Modal>
             </>
           );

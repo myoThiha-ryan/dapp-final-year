@@ -17,6 +17,7 @@ export class MspaceProvider extends Component {
     this.state = {
       userAddress: "",
       totalUser: 0,
+      totalBalance: 0,
       appUsers: [],
       currentUserPosts: [],
       likedPostIds: [],
@@ -28,7 +29,7 @@ export class MspaceProvider extends Component {
       connected: false,
       decentragram: {},
       loading: false,
-      error: "",
+      success: "",
     };
   }
 
@@ -50,6 +51,10 @@ export class MspaceProvider extends Component {
     // Load account
     const accounts = await web3.eth.getAccounts();
     const account = accounts[0];
+    // Load balance
+    const weiBalance = await window.web3.eth.getBalance(account);
+    const ethBalance = window.web3.utils.fromWei(weiBalance);
+
     // Get Network ID
     const networkId = await web3.eth.net.getId();
     const decentragramData = Decentragram.networks[networkId];
@@ -98,12 +103,15 @@ export class MspaceProvider extends Component {
         likes: post.likes.toNumber(),
         dislikes: post.dislikes.toNumber(),
       }));
-
+      //Sort Posts According To Likes and Tip Amount
+      _parsedAllPosts.sort(
+        (a, b) => b.tipAmount - a.tipAmount || b.likes - a.likes
+      );
       //GET TOTAL Number Of USER
       const getUserCount = await decentragram.methods.getUserCount().call();
 
       if (account) {
-        //GET USER POST
+        //GET CURRENT USER POST
         const getPosts = await decentragram.methods.getPosts(account).call();
 
         const _parsedCurrentUserPosts = getPosts.map((post) => ({
@@ -120,7 +128,7 @@ export class MspaceProvider extends Component {
           dislikes: post.dislikes.toNumber(),
         }));
 
-        //Get All LikedPosts
+        //Get All Current User LikedPosts
         const getAllLikedPostIds = await decentragram.methods
           .getLikedPostIDs(account)
           .call();
@@ -128,14 +136,14 @@ export class MspaceProvider extends Component {
           id.toNumber()
         );
 
-        //Get All LikedPosts
+        //Get All Current User DisLikedPosts
         const getAllDislikedPostIds = await decentragram.methods
           .getDislikedPostIDs(account)
           .call();
         const _getAllDislikedPostIds = getAllDislikedPostIds.map((id) =>
           id.toNumber()
         );
-        //GET USER DETAILS
+        //GET CURRENT USER DETAILS
         const userDetails = await decentragram.methods.profiles(account).call();
         const _parsedData = {
           owner: userDetails.owner,
@@ -149,7 +157,7 @@ export class MspaceProvider extends Component {
           followingCount: userDetails.followingCount.toNumber(),
         };
 
-        //GET USER FOLLOWERS
+        //GET CURRENT USER FOLLOWERS
         const getFollowers = await decentragram.methods
           .getFollowers(account)
           .call();
@@ -172,11 +180,11 @@ export class MspaceProvider extends Component {
           })
         );
 
-        //GET USER FOLLOWING
+        //GET CURRENT USER FOLLOWING
         const getFollowing = await decentragram.methods
           .getFollowing(account)
           .call();
-        const followerings = await Promise.all(
+        const followings = await Promise.all(
           getFollowing.map(async (address) => {
             const singleFollowing = await decentragram.methods
               .profiles(address)
@@ -200,12 +208,13 @@ export class MspaceProvider extends Component {
           appUsers: _parsedAppUsers,
           allAppPosts: _parsedAllPosts,
           totalUser: getUserCount.toNumber(),
+          totalBalance: ethBalance,
           currentUserPosts: _parsedCurrentUserPosts,
           likedPostIds: _getAllLikedPostIds,
           dislikedPostIds: _getAllDislikedPostIds,
           userAccountDetails: _parsedData,
           userFollowers: followers,
-          userFollowings: followerings,
+          userFollowings: followings,
         });
       }
     } else {
@@ -222,7 +231,7 @@ export class MspaceProvider extends Component {
     const formData = new FormData();
     formData.append("file", this.state.file);
     const pinataMetadata = JSON.stringify({
-      name: "Image1",
+      name: this.state.file.name,
     });
     formData.append("pinataMetadata", pinataMetadata);
 
@@ -243,25 +252,64 @@ export class MspaceProvider extends Component {
         }
       );
       const profilePictureURL = res.data.IpfsHash;
+      const componentObject = this;
       await this.state.decentragram.methods
         .createAccount(username, biography, profilePictureURL)
         .send({ from: this.state.userAddress })
         .on("transactionHash", async function() {
-          alert("Successfully Created Account");
+          componentObject.setState({ success: "Successfully Created Account" });
         });
-      // if (transaction && !transaction.hasOwnProperty("transactionHash")) {
-      //   this.setState({ connected: "Login Account" });
-      //   this.setState({ loading: true });
-      //   window.location.reload();
-      // }
-      // this.setState({ loading: true });
-      // await getCreatedUser.wait();
-      // this.setState({ loading: false });
-      // window.location.reload();
     } catch (error) {
-      this.setState({
-        error: "Error while creating your account. Please reload your browser.",
+      alert("Error while creating your account. Please reload your browser.");
+    }
+  };
+
+  editProfile = async (address, username, biography) => {
+    if (!this.state.file) {
+      const profilePictureURL = "";
+      await this.state.decentragram.methods
+        .editProfile(address, username, biography, profilePictureURL)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          alert("Successfully Edited Profile");
+        });
+    } else {
+      const formData = new FormData();
+      formData.append("file", this.state.file);
+      const pinataMetadata = JSON.stringify({
+        name: "Image1",
       });
+      formData.append("pinataMetadata", pinataMetadata);
+
+      const pinataOptions = JSON.stringify({
+        cidVersion: 0,
+      });
+      formData.append("pinataOptions", pinataOptions);
+      const componentObject = this;
+      try {
+        const res = await axios.post(
+          "https://api.pinata.cloud/pinning/pinFileToIPFS",
+          formData,
+          {
+            maxBodyLength: "Infinity",
+            headers: {
+              "Content-Type": `multipart/form-data; boundary=${formData._boundary}`,
+              Authorization: JWT,
+            },
+          }
+        );
+        const profilePictureURL = res.data.IpfsHash;
+        await this.state.decentragram.methods
+          .editProfile(address, username, biography, profilePictureURL)
+          .send({ from: this.state.userAddress })
+          .on("transactionHash", async function() {
+            componentObject.setState({
+              success: "Successfully Edited Profile",
+            });
+          });
+      } catch (error) {
+        alert("Error while editing your profile. Please reload your browser.");
+      }
     }
   };
 
@@ -269,7 +317,7 @@ export class MspaceProvider extends Component {
     const formData = new FormData();
     formData.append("file", this.state.file);
     const pinataMetadata = JSON.stringify({
-      name: "image",
+      name: this.state.file.name,
     });
     formData.append("pinataMetadata", pinataMetadata);
 
@@ -277,6 +325,7 @@ export class MspaceProvider extends Component {
       cidVersion: 0,
     });
     formData.append("pinataOptions", pinataOptions);
+    const componentObject = this;
     try {
       const res = await axios.post(
         "https://api.pinata.cloud/pinning/pinFileToIPFS",
@@ -294,49 +343,73 @@ export class MspaceProvider extends Component {
         .createPost(postDescription, postURL, postType)
         .send({ from: this.state.userAddress })
         .on("transactionHash", async function() {
-          alert("Successfully Created Post");
+          componentObject.setState({ success: "Successfully Created Post" });
         });
     } catch (error) {
-      this.setState({
-        error: "Error while creating a post. Please reload your browser.",
-      });
+      alert("Error while creating a post. Please reload your browser.");
     }
   };
 
   likePost = async (postId) => {
-    await this.state.decentragram.methods
-      .likePost(postId)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Liked Post");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .likePost(postId)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Liked Post" });
+        });
+    } catch (error) {
+      alert("Error while liking a post. Please reload your browser.");
+    }
   };
 
   unlikePost = async (postId) => {
-    await this.state.decentragram.methods
-      .unlikePost(postId)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Unliked Post");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .unlikePost(postId)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Unliked Post" });
+        });
+    } catch (error) {
+      alert(
+        "Error while removing like from the post. Please reload your browser."
+      );
+    }
   };
 
   dislikePost = async (postId) => {
-    await this.state.decentragram.methods
-      .dislikePost(postId)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Disliked Post");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .dislikePost(postId)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Disliked Post" });
+        });
+    } catch (error) {
+      alert(
+        "Error while giving dislike to the post. Please reload your browser."
+      );
+    }
   };
 
   undislikePost = async (postId) => {
-    await this.state.decentragram.methods
-      .undislikePost(postId)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Undisliked Post");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .undislikePost(postId)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Undisliked Post" });
+        });
+    } catch (error) {
+      alert(
+        "Error while removing dislike from the post. Please reload your browser."
+      );
+    }
   };
 
   handleLogout = () => {
@@ -356,30 +429,49 @@ export class MspaceProvider extends Component {
   };
 
   tipPost = (postId, tipAmount) => {
-    this.state.decentragram.methods
-      .tipPost(postId)
-      .send({ from: this.state.userAddress, value: tipAmount })
-      .on("transactionHash", async function() {
-        alert("Successfully Tipped Post");
-      });
+    if (tipAmount > this.state.totalBalance) {
+      alert("Current Amount Is Not Enough To Tip!");
+      return;
+    }
+    const componentObject = this;
+    try {
+      this.state.decentragram.methods
+        .tipPost(postId)
+        .send({ from: this.state.userAddress, value: tipAmount })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Tipped Post" });
+        });
+    } catch (error) {
+      alert("Error while tipping the post. Please reload your browser.");
+    }
   };
 
   followUser = async (address) => {
-    await this.state.decentragram.methods
-      .follow(address)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Followed");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .follow(address)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Followed" });
+        });
+    } catch (error) {
+      alert("Error while following the user. Please reload your browser.");
+    }
   };
 
   unFollowUser = async (address) => {
-    await this.state.decentragram.methods
-      .unfollow(address)
-      .send({ from: this.state.userAddress })
-      .on("transactionHash", async function() {
-        alert("Successfully Unfollowed");
-      });
+    const componentObject = this;
+    try {
+      await this.state.decentragram.methods
+        .unfollow(address)
+        .send({ from: this.state.userAddress })
+        .on("transactionHash", async function() {
+          componentObject.setState({ success: "Successfully Unfollowed" });
+        });
+    } catch (error) {
+      alert("Error while unfollowing the user. Please reload your browser.");
+    }
   };
 
   componentDidMount() {
@@ -392,6 +484,7 @@ export class MspaceProvider extends Component {
       decentragram,
       userAddress,
       totalUser,
+      totalBalance,
       appUsers,
       currentUserPosts,
       likedPostIds,
@@ -402,13 +495,14 @@ export class MspaceProvider extends Component {
       userFollowings,
       connected,
       loading,
-      error,
+      success,
     } = this.state;
 
     const {
       loadWeb3,
       loadBlockchainData,
       createAccount,
+      editProfile,
       createPost,
       likePost,
       unlikePost,
@@ -426,6 +520,7 @@ export class MspaceProvider extends Component {
           decentragram,
           userAddress,
           totalUser,
+          totalBalance,
           appUsers,
           currentUserPosts,
           likedPostIds,
@@ -436,10 +531,11 @@ export class MspaceProvider extends Component {
           userFollowings,
           connected,
           loading,
-          error,
+          success,
           loadWeb3,
           loadBlockchainData,
           createAccount,
+          editProfile,
           createPost,
           likePost,
           unlikePost,

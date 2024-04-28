@@ -6,16 +6,8 @@ contract Decentragram {
     address public admin;
     address[] internal addresses;
     mapping(string => address) internal names;
-    // to map from the user account address to related profile struct
-    mapping(address => Profile) public profiles;
-    mapping(address => mapping(address => Profile)) internal followers;
-    mapping(address => mapping(address => Profile)) internal following;
-    // to map from the author's account address to the array of related posts created
-    mapping(address => Post[]) internal posts;
-    mapping(address => uint[]) internal likedPosts;
-    mapping(address => uint[]) internal dislikedPosts;
 
-    //GREATING DI
+    //Generating ID
     uint256 public _postID;
     uint256 public _userID;
 
@@ -33,18 +25,6 @@ contract Decentragram {
         address[] followers;
         address[] following;
     }
-
-    // struct User {
-    //     string username;
-    //     string biography;
-    //     string profilePictureURL;
-    //     Friend[] friends;
-    // }
-
-    // struct Friend {
-    //     address pubkey;
-    //     string username;
-    // }
 
     struct Post {
         uint postId;
@@ -72,7 +52,46 @@ contract Decentragram {
         uint followingCount;
     }
 
-    AllUserStruct[] getAllUsers; // array to store all the registered users
+    // to map from the user account address to related profile struct
+    mapping(address => Profile) public profiles;
+    // to map from the user's account address to the array of related posts created
+    mapping(address => Post[]) internal posts;
+    // to map from the user's account address to the array of post ids that the user liked
+    mapping(address => uint[]) internal likedPosts;
+    // to map from the user's account address to the array of post ids that the user disliked
+    mapping(address => uint[]) internal dislikedPosts;
+    // array to store all the registered users
+    AllUserStruct[] getAllUsers;
+    // array to store all the created posts by users
+    Post[] allPosts;
+
+    // Events
+
+    event AccountCreated(
+        address owner,
+        string username,
+        string biography,
+        string profilePictureURL
+    );
+
+    event PostCreated(
+        address payable author,
+        string postDescription,
+        string postType,
+        string postURL
+    );
+
+    event PostLiked(address userWhoLike, uint256 postID, uint256 likeCount);
+
+    event PostDisliked(
+        address userWhoDislike,
+        uint256 postID,
+        uint256 dislikeCount
+    );
+
+    event PostTipped(uint postId, address payable author, uint tipAmount);
+
+    event UserFollowed(address accountAddress, uint followerCount);
 
     // Check if message sender has a created profile
     modifier senderHasProfile() {
@@ -101,86 +120,23 @@ contract Decentragram {
         _;
     }
 
-    // Check that the input is not empty
-    // modifier nonEmptyInput(string memory _input) {
-    //     require(
-    //         keccak256(abi.encodePacked(_input)) !=
-    //             keccak256(abi.encodePacked("")),
-    //         "ERROR: <Input cannot be empty>"
-    //     );
-    //     _;
-    // }
-
-    // events for contract
-
-    /*event UserCreated(string username, string biography, string profileImgHash);
-    event PostCreated(
-        uint id,
-        address payable postAuthor,
-        string imgHash,
-        string content,
-        uint timestamp,
-        uint tipAmount,
-        uint likes,
-        uint dislikes
-    );
-    event PostLiked(
-        address liker,
-        address postAuthor,
-        uint postid,
-        uint newLikeCount
-    );
-    event PostUnLiked(
-        address unliker,
-        address postAuthor,
-        uint postid,
-        uint newLikeCount
-    );
-    event PostDisliked(
-        address disliker,
-        address postAuthor,
-        uint postid,
-        uint newDislikeCount
-    );
-    event PostUnDisliked(
-        address unDisliker,
-        address postAuthor,
-        uint postid,
-        uint newDislikeCount
-    );
-
-    event ImageCreated(
-        uint id,
-        string hash,
-        string description,
-        uint tipAmount,
-        address payable author
-    );
-
-    event ImageTipped(
-        uint id,
-        string hash,
-        string description,
-        uint tipAmount,
-        address payable author
-    );
-    */
     constructor() public {
         contractName = "Decentragram";
         admin = msg.sender;
     }
 
-    // Create a new profile from a given username
+    // Create a new user account
     function createAccount(
         string memory _username,
         string memory _biography,
         string memory _profilePictureURL
     ) public {
-        // Checks that the current account did not already make a profile and did not choose a taken username
+        // Checks that the current account address did not already make a user account
         require(
             profiles[msg.sender].owner == address(0x0),
             "ERROR: <You have already created an account>"
         );
+        // Checks that the current account address did not choose a taken username
         require(names[_username] == address(0x0), "ERROR: <Username taken>");
         //Increment User ID
         _userID++;
@@ -207,10 +163,6 @@ contract Decentragram {
         // Add address to list of global addresses
         addresses.push(msg.sender);
 
-        // users[msg.sender].username = _username;
-        // users[msg.sender].biography = _biography;
-        // users[msg.sender].profilePictureHash = _profilePictureHash;
-
         getAllUsers.push(
             AllUserStruct(
                 msg.sender,
@@ -224,16 +176,43 @@ contract Decentragram {
                 0
             )
         );
+        emit AccountCreated(
+            msg.sender,
+            _username,
+            _biography,
+            _profilePictureURL
+        );
+    }
+
+    function editProfile(
+        address _address,
+        string memory _username,
+        string memory _biography,
+        string memory _profilePictureURL
+    ) public {
+        for (uint i = 0; i < getAllUsers.length; i++) {
+            if (getAllUsers[i].owner == _address) {
+                getAllUsers[i].username = _username;
+                getAllUsers[i].biography = _biography;
+                profiles[_address].username = _username;
+                profiles[_address].biography = _biography;
+                if (bytes(_profilePictureURL).length > 0) {
+                    getAllUsers[i].profilePictureURL = _profilePictureURL;
+                    profiles[_address].profilePictureURL = _profilePictureURL;
+                }
+                break;
+            }
+        }
+        emit AccountCreated(
+            msg.sender,
+            _username,
+            _biography,
+            _profilePictureURL
+        );
     }
 
     // Follow a new profile
-    function follow(
-        address _address
-    ) external senderHasProfile profileExists(_address) notSelf(_address) {
-        // Add entry to "followers" and "following" mappings
-        followers[_address][msg.sender] = profiles[msg.sender];
-        following[msg.sender][_address] = profiles[_address];
-
+    function follow(address _address) external senderHasProfile {
         // Add element to "followers" and "following" arrays in both Profile objects
         profiles[_address].followers.push(msg.sender);
         profiles[msg.sender].following.push(_address);
@@ -251,17 +230,12 @@ contract Decentragram {
                 getAllUsers[i].followingCount++;
             }
         }
+
+        emit UserFollowed(_address, profiles[_address].followerCount);
     }
 
     // Unfollow a profile
-    // This deletion operation has a time complexity of O(N), is there a better way to do this?
-    function unfollow(
-        address _address
-    ) external senderHasProfile profileExists(_address) notSelf(_address) {
-        // Delete entry from "followers" and "following" mappings
-        delete followers[_address][msg.sender];
-        delete following[msg.sender][_address];
-
+    function unfollow(address _address) external {
         // Delete element from "followers" array in Profile object and decrement followerCount
         for (uint i = 0; i < profiles[_address].followerCount; i++) {
             if (profiles[_address].followers[i] == msg.sender) {
@@ -330,6 +304,8 @@ contract Decentragram {
                 getAllUsers[i].postCount++;
             }
         }
+
+        emit PostCreated(msg.sender, _postDescription, _postType, _postURL);
     }
 
     // like post
@@ -339,6 +315,11 @@ contract Decentragram {
                 if (posts[addresses[i]][j].postId == _postId) {
                     posts[addresses[i]][j].likes++;
                     likedPosts[msg.sender].push(_postId);
+                    emit PostLiked(
+                        msg.sender,
+                        posts[addresses[i]][j].postId,
+                        posts[addresses[i]][j].likes
+                    );
                     break;
                 }
             }
@@ -400,7 +381,7 @@ contract Decentragram {
     }
 
     // tip post
-    function tipPost(uint256 _postId) external payable {
+    function tipPost(uint256 _postId) external payable senderHasProfile {
         for (uint i = 0; i < addresses.length; i++) {
             for (uint j = 0; j < posts[addresses[i]].length; j++) {
                 if (posts[addresses[i]][j].postId == _postId) {
@@ -409,47 +390,16 @@ contract Decentragram {
                     posts[addresses[i]][j].tipAmount =
                         posts[addresses[i]][j].tipAmount +
                         msg.value;
+                    emit PostTipped(
+                        posts[addresses[i]][j].postId,
+                        posts[addresses[i]][j].author,
+                        posts[addresses[i]][j].tipAmount
+                    );
                     break;
                 }
             }
         }
     }
-
-    // tip post
-    /*function tipImageOwner(uint256 _postId) external payable {
-        for (uint i = 0; i < addresses.length; i++) {
-            for (uint j = 0; j < posts[addresses[i]].length; j++) {
-                if (posts[addresses[i]][j].postId == _postId) {
-                    address payable _author = posts[addresses[i]][j].author;
-                    address(_author).transfer(msg.value);
-                    posts[addresses[i]][j].tipAmount =
-                        posts[addresses[i]][j].tipAmount +
-                        msg.value;
-                    break;
-                }
-            }
-        }
-        // Make sure the id is valid
-        require(_id > 0 && _id <= imageCount);
-        // Fetch the image
-        Image memory _image = images[_id];
-        // Fetch the author
-        address payable _author = _image.author;
-        // Pay the author by sending them Ether
-        address(_author).transfer(msg.value);
-        // Increment the tip amount
-        _image.tipAmount = _image.tipAmount + msg.value;
-        // Update the image
-        images[_id] = _image;
-        // Trigger an event
-        emit ImageTipped(
-            _id,
-            _image.hash,
-            _image.description,
-            _image.tipAmount,
-            _author
-        );
-    }*/
 
     // Return all registered users
     function getAllAppUser() public view returns (AllUserStruct[] memory) {
@@ -516,56 +466,4 @@ contract Decentragram {
         }
         return items;
     }
-
-    // GET SINGLE POST
-    // function getSinglePost(
-    //     uint256 _postId
-    // )
-    //     external
-    //     view
-    //     returns (
-    //         address,
-    //         string memory,
-    //         string memory,
-    //         string memory,
-    //         string memory,
-    //         string memory,
-    //         uint,
-    //         uint,
-    //         uint,
-    //         uint
-    //     )
-    // {
-    //     for (uint i = 0; i < addresses.length; i++) {
-    //         for (uint j = 0; j < posts[addresses[i]].length; j++) {
-    //             if (posts[addresses[i]][j].postId == _postId) {
-    //                 return (
-    //                     posts[addresses[i]][j].author,
-    //                     posts[addresses[i]][j].username,
-    //                     posts[addresses[i]][j].profilePictureURL,
-    //                     posts[addresses[i]][j].postType,
-    //                     posts[addresses[i]][j].postURL,
-    //                     posts[addresses[i]][j].postDescription,
-    //                     posts[addresses[i]][j].timeCreated,
-    //                     posts[addresses[i]][j].tipAmount,
-    //                     posts[addresses[i]][j].likes,
-    //                     posts[addresses[i]][j].dislikes
-    //                 );
-    //             }
-    //         }
-    //     }
-    // }
-
-    /*uint public imageCount = 0;
-
-    mapping(address => Image) public statuses;
-    mapping(uint => Image) public images;
-
-    struct Image {
-        uint id;
-        string hash;
-        string description;
-        uint tipAmount;
-        address payable author;
-    }*/
 }

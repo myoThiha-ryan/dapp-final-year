@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Box, Stack } from "@mui/material";
+import { Alert, AlertTitle, Box, Modal, Stack } from "@mui/material";
 import Post from "./Post";
 import { MspaceConsumer } from "../context/mspaceContext";
 
@@ -17,6 +17,7 @@ class Feed extends Component {
             undislikePost,
             tipPost,
             allAppPosts,
+            success,
           } = props;
           return (
             <Box p={2} flex={4}>
@@ -37,6 +38,26 @@ class Feed extends Component {
                   );
                 })}
               </Stack>
+              {success && (
+                <Modal
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  open={success ? true : false}
+                  onClose={this.handleClose}
+                  aria-labelledby="modal-modal-title"
+                  aria-describedby="modal-modal-description"
+                >
+                  <Alert
+                    severity="success"
+                    sx={{ width: "400px", height: "100px" }}
+                  >
+                    <AlertTitle>Success</AlertTitle>
+                    {success}
+                  </Alert>
+                </Modal>
+              )}
             </Box>
           );
         }}

@@ -60,12 +60,13 @@ export const connectWallet = async () => {
 export const convertTime = (time) => {
   const newTime = new Date(time * 1000);
   const realTime =
+    "Time: " +
     newTime.getHours() +
     ":" +
     newTime.getMinutes() +
     ":" +
     newTime.getSeconds() +
-    " Date:" +
+    " Date: " +
     newTime.getDate() +
     "/" +
     (newTime.getMonth() + 1) +

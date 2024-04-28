@@ -1,4 +1,13 @@
-import { Box, Button, Stack, Typography, styled } from "@mui/material";
+import {
+  Alert,
+  AlertTitle,
+  Box,
+  Button,
+  Modal,
+  Stack,
+  Typography,
+  styled,
+} from "@mui/material";
 import logo from "../assets/logo.png";
 import { MspaceConsumer } from "../context/mspaceContext";
 import React, { Component } from "react";
@@ -22,6 +31,8 @@ class AccountRegistration extends Component {
     super(props);
     this.state = {
       value: "",
+      open: false,
+      error: "",
     };
   }
 
@@ -34,11 +45,15 @@ class AccountRegistration extends Component {
     this.setState({ value: undefined });
   };
 
+  handleClose = () => {
+    this.setState({ open: false, error: "" });
+  };
+
   render() {
     return (
       <MspaceConsumer>
         {(props) => {
-          const { createAccount, captureFile } = props;
+          const { createAccount, captureFile, success } = props;
           return (
             <>
               <Navbar />
@@ -48,29 +63,29 @@ class AccountRegistration extends Component {
                   height: "100vh",
                   backgroundColor: "black",
                   flexDirection: "row",
-                  alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Box sx={{ width: "400px" }}>
+                <Box sx={{ width: "400px", mt: "200px" }}>
                   <form
                     onSubmit={async (event) => {
                       event.preventDefault();
                       const username = this.username.value;
                       const biography = this.biography.value;
-                      {
-                        console.log(username, biography);
+                      if (username === "") {
+                        this.setState({ error: "Username is required" });
+                      } else {
+                        createAccount(username, biography);
                       }
-                      createAccount(username, biography);
                     }}
                   >
                     <Stack
                       direction={"column"}
-                      gap={"15px"}
+                      gap={"20px"}
                       alignItems={"center"}
                     >
-                      <Typography variant="h6" color={"#46c4e3"}>
-                        Please Create an Account
+                      <Typography variant="h6" color={"white"}>
+                        Create an Account
                       </Typography>
                       <input
                         id="username"
@@ -79,8 +94,7 @@ class AccountRegistration extends Component {
                           this.username = input;
                         }}
                         className="form-control"
-                        placeholder="Please type username..."
-                        required
+                        placeholder="Enter username..."
                       />
                       <input
                         id="biography"
@@ -89,8 +103,7 @@ class AccountRegistration extends Component {
                           this.biography = input;
                         }}
                         className="form-control"
-                        placeholder="Please type biography..."
-                        required
+                        placeholder="Enter biography..."
                       />
                       {this.state.value ? (
                         <FileCard
@@ -121,6 +134,46 @@ class AccountRegistration extends Component {
                   </form>
                 </Box>
               </Stack>
+              {this.state.error && (
+                <Modal
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  open={this.state.error ? true : false}
+                  onClose={this.handleClose}
+                  aria-labelledby="modal-modal-title"
+                  aria-describedby="modal-modal-description"
+                >
+                  <Alert
+                    severity="error"
+                    sx={{ width: "400px", height: "100px" }}
+                  >
+                    <AlertTitle>Error</AlertTitle>
+                    {this.state.error}
+                  </Alert>
+                </Modal>
+              )}
+              {success && (
+                <Modal
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                  open={success ? true : false}
+                  onClose={this.handleClose}
+                  aria-labelledby="modal-modal-title"
+                  aria-describedby="modal-modal-description"
+                >
+                  <Alert
+                    severity="success"
+                    sx={{ width: "400px", height: "100px" }}
+                  >
+                    <AlertTitle>Success</AlertTitle>
+                    {success}
+                  </Alert>
+                </Modal>
+              )}
             </>
           );
         }}
